@@ -3,14 +3,30 @@ from  scipy.misc import derivative
 import matplotlib.pyplot as plt
 import seaborn as sns
 import cv2
-def in_paint_alg(img, target_region,source_region,patch_size):
-    im_x=img.shape[0]
-    im_y=img.shape[1]
-    C=np.zeros((im_x,im_y))
+def in_paint_alg(img, contour, source_region,normal,patch_size=9):
+    im_x=img.shape[1]
+    im_y=img.shape[0]
+    C=source_region.copy()
+    C[C>0]=1
+    C_new=np.zeros_like(C,dtype=float)
     D=np.zeros((im_x,im_y))
-    isophote=isophote(img,0.25)
+    isophotes=isophote(img,0.25)[1]
+    # alpha=255
 
-    
+    for point in contour:
+        p_x,p_y=point
+        temp=0
+        for x in range(p_x-patch_size//2,p_x+patch_size//2):
+            for y in range(p_y-patch_size//2,p_y+patch_size//2):
+                if x<0 or y<0 or x>=im_x or y>=im_y:
+                    continue
+                temp+=(1/patch_size**2)*C[x,y]
+        C_new[p_x,p_y]=temp
+        angle_between=np.abs(isophotes[p_x,p_y]-normal[p_x,p_y])
+        D[p_x,p_y]=np.abs(np.cos(angle_between))
+    ([print(D[x,y],C_new[x,y]) for x,y in contour])
+    P=np.array([D[x,y]*C_new[x,y] for x,y in contour])
+    return  P
 
 
 #function  found in matlab documentation
@@ -22,28 +38,25 @@ def isophote(L, alpha):
     I = I / np.max(np.max(I))
     print(np.max(np.max(I)), "\tmax all\t",np.max(I))
     T = (I >= alpha)
-    T_bin = T.astype(int)
+
     theta[T] = np.arctan2(Ly[T], Lx[T])
     theta_shape = theta.shape
-    theta_modified = np.zeros(theta_shape)
-    # for i in range(theta_shape[0]):
-    #     for j in range(theta_shape[1]):
-            # x = theta[i, j]
-            # if x > np.pi/2:
-            #     theta_modified[i, j] = np.pi/2 - x
-            # elif x <-np.pi/2:
-            #     theta_modified[i, j] = -1*(x + np.pi/2)
-            # elif x==0:
-            #     theta_modified[i, j] = x
-            # else:
-            #     theta_modified[i, j] = np.pi/2-x
-    # theta = theta_modified
+
     theta = theta * 180 / np.pi
     I[I < alpha] = 0
     return I, theta
 
 
+def normal_calc(source_region):
+    # Calculate the gradient in the x and y directions
+    grad_x = cv2.Sobel(source_region, cv2.CV_64F, 1, 0, ksize=3)
+    grad_y = cv2.Sobel(source_region, cv2.CV_64F, 0, 1, ksize=3)
 
+    # Calculate the direction of the gradient
+    gradient_direction = np.arctan2(grad_y, grad_x)
+
+    normal = (gradient_direction - np.pi / 2)
+    return normal
 
 # # Define your continuous function
 # def f(x):
