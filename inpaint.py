@@ -1,5 +1,5 @@
 import numpy as np
-from  scipy.misc import derivative
+# from  scipy.misc import derivative
 import matplotlib.pyplot as plt
 import seaborn as sns
 import cv2
@@ -40,6 +40,7 @@ def patch_distance(patch,source_region,img,patch_size):
     min_dist=100000
     im_x=img.shape[1]
     im_y=img.shape[0]
+    img_lab = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
     for point in source_region:
         p_x,p_y=point
         x_indices = range(p_x - patch_size // 2, p_x + patch_size // 2)
@@ -48,10 +49,8 @@ def patch_distance(patch,source_region,img,patch_size):
         x_indices = [x for x in x_indices if 0 <= x < im_x]
         y_indices = [y for y in y_indices if 0 <= y < im_y]
 
-        #calculate distance in terms of LAB color space
-        img_lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
 
-        patch_curr=img[x_indices,y_indices]
+        patch_curr=img_lab[x_indices,y_indices]
 
         distance = np.sum((patch - patch_curr)**2)
       
@@ -65,12 +64,15 @@ def patch_distance(patch,source_region,img,patch_size):
 
 #function  found in matlab documentation
 def isophote(L, alpha):
+    #convert image to grayscale
+    L=cv2.cvtColor(L, cv2.COLOR_RGB2GRAY)
+    #nromalize the image
     L = L.astype(float) / 255.0
+    #initialise the gradient and theta
     theta = np.zeros_like(L)
     Lx, Ly = np.gradient(L)
     I = np.sqrt(Lx**2 + Ly**2)
     I = I / np.max(np.max(I))
-    print(np.max(np.max(I)), "\tmax all\t",np.max(I))
     T = (I >= alpha)
 
     theta[T] = np.arctan2(Ly[T], Lx[T])
