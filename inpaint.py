@@ -11,22 +11,56 @@ def in_paint_alg(img, contour, source_region,normal,patch_size=9):
     C_new=np.zeros_like(C,dtype=float)
     D=np.zeros((im_x,im_y))
     isophotes=isophote(img,0.25)[1]
-    # alpha=255
 
+    #iterate through the contour and calculate the patch Priority P
     for point in contour:
         p_x,p_y=point
         temp=0
+        #Caclulate the confidence term for patch size   
         for x in range(p_x-patch_size//2,p_x+patch_size//2):
             for y in range(p_y-patch_size//2,p_y+patch_size//2):
                 if x<0 or y<0 or x>=im_x or y>=im_y:
                     continue
                 temp+=(1/patch_size**2)*C[x,y]
         C_new[p_x,p_y]=temp
+        #calculate the isophotes term
         angle_between=np.abs(isophotes[p_x,p_y]-normal[p_x,p_y])
         D[p_x,p_y]=np.abs(np.cos(angle_between))
-    ([print(D[x,y],C_new[x,y]) for x,y in contour])
     P=np.array([D[x,y]*C_new[x,y] for x,y in contour])
-    return  P
+    #now order the patch prioriteis based on the highes priority
+    P_zip = list(zip(P, contour))
+    P_zip_sorted = np.array(sorted(P_zip, key=lambda x: x[0], reverse=True))
+
+    #now propagate texture and structure information
+
+
+
+def patch_distance(patch,source_region,img,patch_size):
+    max_similarity=[0,0]
+    min_dist=100000
+    im_x=img.shape[1]
+    im_y=img.shape[0]
+    for point in source_region:
+        p_x,p_y=point
+        x_indices = range(p_x - patch_size // 2, p_x + patch_size // 2)
+        y_indices = range(p_y - patch_size // 2, p_y + patch_size // 2)
+        #ensure all indices are in image bounds
+        x_indices = [x for x in x_indices if 0 <= x < im_x]
+        y_indices = [y for y in y_indices if 0 <= y < im_y]
+
+        #calculate distance in terms of LAB color space
+        img_lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+
+        patch_curr=img[x_indices,y_indices]
+
+        distance = np.sum((patch - patch_curr)**2)
+      
+        if distance<min_dist:
+            min_dist=distance
+            max_similarity[0]=p_x
+            max_similarity[1]=p_y
+    return max_similarity
+
 
 
 #function  found in matlab documentation
