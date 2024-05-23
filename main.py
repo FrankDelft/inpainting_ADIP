@@ -4,41 +4,33 @@ import numpy as np
 import matplotlib.pyplot as plt
 from inpaint import *
 import inpaint
+from util import *
 
-img = cv2.imread('test.png')
+# Load the image
+name='girl.png'
+name_mask='girl2.png'
+img = cv2.imread(name)
+img_mask=cv2.imread(name_mask,cv2.IMREAD_GRAYSCALE)
+
 img_col = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-img_gray = cv2.imread('test.png', cv2.IMREAD_GRAYSCALE)
-
+img_gray = cv2.imread(name, cv2.IMREAD_GRAYSCALE)
+print(img_gray.shape)
+#rectangle def
 x_width = img_gray.shape[1]
 y_height = img_gray.shape[0]
 x1,y1,x2,y2=(120,280,230,400)
-print("x_width",x_width,"y_height",y_height)
-
-plt.imshow(img_col)
-plt.axis('off')
-plt.gca().add_patch(plt.Rectangle((x1, y1), x2 - x1, y2 - y1, edgecolor='r', facecolor='none'))
-plt.show()
+#circle def
+x1_c,y1_c,r=(150,290,50)
 
 
-#######################################################
-#define contour and regions
-image = np.zeros((x_width, y_height), np.uint8) 
-thickness = 1
-contour = cv2.rectangle(image.copy(),[y1,x1],[y2,x2], 255, thickness) 
-# Creating rectangle
-thickness = -1
-target_region = cv2.rectangle(image.copy(),[y1,x1],[y2,x2], 255, thickness) 
-thickness = -1
-source_region =np.array(cv2.bitwise_not(target_region))
+######################################################
+contour_indices_rect,source_indices_rect,target_indices_rect= rectangle_target(x_width,y_height,x1,y1,x2,y2)
 
-#get x and y pixel co-ordinates
-temp=np.where(np.array(np.array(contour)==255,dtype=int)==1)
-contour_indices = np.array(list(zip(temp[0],temp[1])))
-temp=np.where(np.array(np.array(source_region)==255,dtype=int)==1)
-#source indices
-source_indices = np.array(list(zip(temp[0],temp[1])))
-temp=np.where(np.array(np.array(target_region)==255,dtype=int)==1)
-target_indices = np.array(list(zip(temp[0],temp[1])))
+contour_indices_circ,source_indices_circ,target_indices_circ= circle_target(x_width,y_height,x1_c,y1_c,r)
+
+source_region_mask = cv2.bitwise_not(img_mask)
+source_indices_mask=np.array(np.where(source_region_mask==255)).T
+contour_mask=get_contour(source_region_mask)
 
 
-P=in_paint_alg(img,contour_indices,source_indices,patch_size=9)
+P=in_paint_alg(img,source_indices_mask,patch_size=9)
