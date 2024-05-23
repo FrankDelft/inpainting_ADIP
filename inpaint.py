@@ -45,12 +45,21 @@ def in_paint_alg(img, contour, source_indices,patch_size=9):
 
     for point in contour_sorted:
         p_x,p_y=point
+        patch_x_min = p_x - patch_size // 2
+        patch_x_max = p_x + int(np.ceil(patch_size / 2))
+        patch_y_min = p_y - patch_size // 2
+        patch_y_max = p_y + int(np.ceil(patch_size / 2))
         #get the patch
-        patch=img[p_y-patch_size//2:p_y+patch_size//2,p_x-patch_size//2:p_x+patch_size//2]
+        patch=img[patch_y_min:patch_y_max,patch_x_min:patch_x_max]
         #find the most similar patch in the source region
         max_similarity=patch_distance(patch,source_indices,img,patch_size)
         #replace the patch
-        cut_img[p_y-patch_size//2:p_y+patch_size//2,p_x-patch_size//2:p_x+patch_size//2]=img[max_similarity[1]-patch_size//2:max_similarity[1]+patch_size//2,max_similarity[0]-patch_size//2:max_similarity[0]+patch_size//2]
+        est_x_min = max_similarity[0] - patch_size // 2
+        est_x_max = max_similarity[0] + int(np.ceil(patch_size / 2))
+        est_y_min = max_similarity[1] - patch_size // 2
+        est_y_max = max_similarity[1] + int(np.ceil(patch_size / 2))
+        cut_img[patch_y_min:patch_y_max,patch_x_min:patch_x_max]=img[est_y_min:est_y_max,est_x_min:est_x_max]
+    
   
 
 
@@ -67,23 +76,30 @@ def patch_distance(patch,source_indices,img,patch_size):
     im_y=img.shape[0]
     img_lab = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
     cut_img = np.zeros_like(img_lab)
-    print("img_lab",img_lab.shape,"img",img.shape)
+
     for x, y in source_indices:
         cut_img[y, x] = img_lab[y, x]
+    counter=0
     for point in source_indices:
+        # counter+=1
+        # if counter%100==0:
+        #     print(counter)
         p_x,p_y=point
-        x_indices = range(p_x - patch_size // 2, p_x + patch_size // 2)
-        y_indices = range(p_y - patch_size // 2, p_y + patch_size // 2)
         #check if the patch is within the image
-        if p_x-patch_size // 2<0 or p_x+patch_size // 2>=im_x or p_y-patch_size // 2<0 or p_y+patch_size // 2>=im_y:
+        patch_x_min = p_x - patch_size // 2
+        patch_x_max = p_x + int(np.ceil(patch_size / 2))
+        patch_y_min = p_y - patch_size // 2
+        patch_y_max = p_y + int(np.ceil(patch_size / 2))
+        if patch_x_min<0 or patch_x_max>=im_x or patch_y_min<0 or patch_y_max>=im_y:
             continue
-        patch_curr=img_lab[y_indices,x_indices]
-        print(patch.shape,patch_curr.shape)
+        patch_curr=img_lab[patch_y_min:patch_y_max,patch_x_min:patch_x_max]
+        # print(len(x_indices),len(y_indices))
         distance = np.sum((patch - patch_curr)**2)
         if distance<min_dist:
             min_dist=distance
             max_similarity[0]=p_x
             max_similarity[1]=p_y
+    
     return max_similarity
 
 #function  found in matlab documentation
