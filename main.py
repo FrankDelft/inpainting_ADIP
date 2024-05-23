@@ -38,7 +38,7 @@ temp=np.where(np.array(np.array(source_region)==255,dtype=int)==1)
 #source indices
 source_indices = np.array(list(zip(temp[0],temp[1])))
 temp=np.where(np.array(np.array(target_region)==255,dtype=int)==1)
-# target_indices = np.array(list(zip(temp[0],temp[1])))
+target_indices = np.array(list(zip(temp[0],temp[1])))
 
 
-P=in_paint_alg(img,contour_indices,source_indices)
+P=in_paint_alg(img,contour_indices,source_indices,patch_size=9)
