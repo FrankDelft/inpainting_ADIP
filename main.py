@@ -31,4 +31,4 @@ source_region_mask = cv2.bitwise_not(img_mask)
 source_indices_mask=np.array(np.where(source_region_mask==255)).T
 contour_mask=get_contour(source_region_mask)
 
-P=in_paint_alg(img,source_indices_mask,patch_size=5)
+P=in_paint_alg(img,source_indices_mask,patch_size=4)

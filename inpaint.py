@@ -25,20 +25,17 @@ def in_paint_alg(img, source_indices,patch_size=9):
         for y in range(patch_size,im_y-patch_size):
             if patch_complete(C_init,x,y,patch_size):
                 source_indices_complete.append((x,y))
-
+    
     fill_img = np.ones_like(img)*-1
+    for x, y in source_indices:
+        fill_img[x, y] = img[x, y]
+    masked_img = fill_img.copy()
+    masked_img[masked_img == -1] = 0
     
     while np.any(source_region == -1):
 
         contour=get_contour(source_region)
         normal=calc_normal(source_region,contour)
-    
-        for x, y in source_indices:
-            fill_img[x, y] = img[x, y]
-        # plt.imshow(fill_img)
-        # plt.title('Cut Image')
-        # plt.scatter(contour[:, 1], contour[:, 0], c='red', s=1)
-        # plt.show()
         
         P,D,C=calc_Priority(contour,normal,isophotes,patch_size,im_x,im_y,C)
         # plot C
@@ -63,7 +60,7 @@ def in_paint_alg(img, source_indices,patch_size=9):
         est_x_max = max_similarity[0] + patch_size+1
         est_y_min = max_similarity[1] - patch_size 
         est_y_max = max_similarity[1] + patch_size+1
-        fill_img[patch_x_min:patch_x_max,patch_y_min:patch_y_max]=fill_img[est_x_min:est_x_max,est_y_min:est_y_max]
+        fill_img[patch_x_min:patch_x_max,patch_y_min:patch_y_max]=masked_img[est_x_min:est_x_max,est_y_min:est_y_max]
         #update the source region and indices
         source_region = np.array(fill_img[:,:,0])
         source_region[source_region !=-1]=255
