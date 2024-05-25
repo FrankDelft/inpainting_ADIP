@@ -6,100 +6,113 @@ import cv2
 def in_paint_alg(img, source_indices,patch_size=9):
     im_x=img.shape[1]
     im_y=img.shape[0]
-
-    C=np.zeros((im_y, im_x), dtype=float)
-    D=np.zeros((im_y,im_x))
-    cut_img = np.ones_like(img)*-1
-
-    source_region = get_mask(source_indices,im_x,im_y)
-    contour=get_contour(source_region)
-
-    # # Plot the contour
-    # plt.imshow(source_region, cmap='gray')
-    # plt.scatter(contour[:, 1], contour[:, 0], color='red')
-    # plt.title('Contour')
-    # plt.show()
-
-    normal=calc_normal(source_region,contour)
     isophotes=isophote(img,0.25)[1]
-    exit()
-    #set pixels that are not in the source region to -1
-    for x, y in source_indices:
-        cut_img[y, x] = img[y, x]
+    source_region = get_mask(source_indices,im_x,im_y)
+
+    C_original=np.zeros((im_y, im_x), dtype=float)
+    C=C_original.copy()
+    D=np.zeros((im_y,im_x))
+    fill_img = np.ones_like(img)*-1
+
+    while np.any(source_region == -1):
+
+        contour=get_contour(source_region)
+        normal=calc_normal(source_region,contour)
     
-    #iterate through the contour and calculate the patch Priority P
-    for point in contour:
-        p_x,p_y=point
-        temp=0
-        #Caclulate the confidence term for patch size   
-        for x in range(p_x,p_x+patch_size):
-            for y in range(p_y,p_y+patch_size):
-                if x<0 or y<0 or x>=im_x or y>=im_y:
-                    continue
-                temp+=(1/patch_size**2)*source_region[y,x]
-        C[p_y,p_x]=temp
-        #calculate the isophotes term
-        angle_between=np.abs(isophotes[p_y,p_x]-normal[p_y,p_x])
-        D[p_y,p_x]=np.abs(np.cos(angle_between))
-    P=np.array([D[y,x]*C[y,x] for x,y in contour])
+        #set pixels that are not in the source region to -1
+        for x, y in source_indices:
+            fill_img[x, y] = img[x, y]
+        # plt.imshow(fill_img)
+        # plt.title('Cut Image')
+        # plt.scatter(contour[:, 1], contour[:, 0], c='red', s=1)
+        # plt.show()
+        
+        
+        #iterate through the contour and calculate the patch Priority P
+        for point in contour:
+            p_x,p_y=point
+            temp=0
+            #Caclulate the confidence term for patch size   
+            for x in range(p_x,p_x+patch_size):
+                for y in range(p_y,p_y+patch_size):
+                    if x<0 or y<0 or x>=im_x or y>=im_y:
+                        continue
+                    temp+=(1/patch_size**2)*source_region[y,x]
+            C[p_x,p_y]=temp
+            #calculate the isophotes term
+            angle_between=np.abs(isophotes[p_x,p_y]-normal[p_x,p_y])
+            D[p_x,p_y]=np.abs(np.cos(angle_between))
+        P=np.array([D[x,y]*C[x,y] for x,y in contour])
 
-    #now order the patch prioriteis based on the highest priority
-    P_zip = list(zip(P, contour))
-    P_zip_sorted = sorted(P_zip, key=lambda x: x[0], reverse=True)
-    contour_sorted = np.array([x[1] for x in P_zip_sorted])
+        #now order the patch prioriteis based on the highest priority
+        P_zip = list(zip(P, contour))
+        P_zip_sorted = sorted(P_zip, key=lambda x: x[0], reverse=True)
+        contour_sorted = np.array([x[1] for x in P_zip_sorted])
 
-    
-    p_x,p_y=contour_sorted[0]
-    patch_x_min = p_x 
-    patch_x_max = p_x + patch_size
-    patch_y_min = p_y 
-    patch_y_max = p_y + patch_size
-    #get the patch
-    patch=img[patch_y_min:patch_y_max,patch_x_min:patch_x_max]
-    #find the most similar patch in the source region
-    max_similarity=patch_distance(patch,source_indices,img,patch_size)
+        
+        p_x,p_y=contour_sorted[0]
+        patch_x_min = p_x - patch_size
+        patch_x_max = p_x + patch_size+1
+        patch_y_min = p_y - patch_size
+        patch_y_max = p_y + patch_size+1
+        #get the patch
+        patch=img[patch_x_min:patch_x_max,patch_y_min:patch_y_max]
+        #find the most similar patch in the source region
+        max_similarity=patch_distance(patch,source_indices,fill_img,patch_size)
 
-    #replace the patch
-    est_x_min = max_similarity[0] 
-    est_x_max = max_similarity[0] + patch_size 
-    est_y_min = max_similarity[1] 
-    est_y_max = max_similarity[1] + patch_size 
-    cut_img[patch_y_min:patch_y_max,patch_x_min:patch_x_max]=img[est_y_min:est_y_max,est_x_min:est_x_max]
+        #replace the patch
+        est_x_min = max_similarity[0] - patch_size
+        est_x_max = max_similarity[0] + patch_size+1
+        est_y_min = max_similarity[1] - patch_size 
+        est_y_max = max_similarity[1] + patch_size+1
+        fill_img[patch_x_min:patch_x_max,patch_y_min:patch_y_max]=img[est_x_min:est_x_max,est_y_min:est_y_max]
+        #update the source region and indices
+        source_region = np.array(fill_img[:,:,0])
+        source_region[source_region !=-1]=255
+        source_region[source_region !=-1]=255
+        source_indices=np.array(np.where(source_region==255)).T
+        
 
-    plt.imshow(cut_img)
-    plt.title('Cut Image')
-    plt.show()
+        # Save fill_img to the current directory
+        cv2.imwrite("fill_img.jpg", fill_img)
+        # plt.imshow(source_region, cmap='gray')
+        # plt.title('Source Region')
+        # plt.show()
         
   
 def update_indices(cut_img):
     indices = np.array(np.where(cut_img != -1))
     return np.transpose(indices)
 
-def patch_distance(patch,source_indices,img,patch_size):
+def patch_distance(patch,C_original,img,patch_size):
     max_similarity=[0,0]
     min_dist=100000
     im_x=img.shape[1]
     im_y=img.shape[0]
+
     img_lab = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
     cut_imgx = np.zeros_like(img_lab)
+    source_indices_complete=[]
+    #lets ensuure we only lookin the orignal source region
+    for x in range(patch_size,im_x-patch_size):
+        for y in range(patch_size,im_y-patch_size):
+            if C_original[x,y]==255:
+                source_indices_complete.append((x,y))
 
     for x, y in source_indices:
-        cut_imgx[y, x] = img_lab[y, x]
-    counter=0
+        cut_imgx[x, y] = img_lab[x,y]
+
     for point in source_indices:
-        # counter+=1
-        # if counter%100==0:
-        #     print(counter)
         p_x,p_y=point
         #check if the patch is within the image
-        patch_x_min = p_x 
-        patch_x_max = p_x + patch_size
-        patch_y_min = p_y 
-        patch_y_max = p_y + patch_size
-        if patch_x_min<0 or patch_x_max>=im_x or patch_y_min<0 or patch_y_max>=im_y:
+        patch_x_min = p_x - patch_size
+        patch_x_max = p_x + patch_size+1
+        patch_y_min = p_y - patch_size
+        patch_y_max = p_y + patch_size+1
+        if patch_x_min<0 or patch_x_max>=im_y or patch_y_min<0 or patch_y_max>=im_x-1:
             continue
-        patch_curr=img_lab[patch_y_min:patch_y_max,patch_x_min:patch_x_max]
-        # print(len(x_indices),len(y_indices))
+        patch_curr=img_lab[patch_x_min:patch_x_max,patch_y_min:patch_y_max,:]
+        # print(patch_curr.shape,patch.shape,patch_y_max,patch_y_min)
         distance = np.sum((patch - patch_curr)**2)
         if distance<min_dist:
             min_dist=distance
@@ -108,6 +121,19 @@ def patch_distance(patch,source_indices,img,patch_size):
     
     return max_similarity
 
+
+def patch_complete(C_original,p_x,p_y,patch_size):
+    im_x=C_original.shape[1]
+    im_y=C_original.shape[0]
+    patch_x_min = p_x - patch_size
+    patch_x_max = p_x + patch_size+1
+    patch_y_min = p_y - patch_size
+    patch_y_max = p_y + patch_size+1
+    for x in range(patch_x_min,patch_x_max):
+        for y in range(patch_y_min,patch_y_max):
+            if C_original[x,y]!=255:
+                return False
+    return True
 #function  found in matlab documentation
 def isophote(L, alpha):
     #convert image to grayscale
@@ -132,16 +158,6 @@ def isophote(L, alpha):
     return I, theta
 
 def get_contour(mask):
-    dx = cv2.Sobel(mask, cv2.CV_64F, 1, 0, ksize=3)
-    dy = cv2.Sobel(mask, cv2.CV_64F, 0, 1, ksize=3)
-    magnitude = np.sqrt(dx**2 + dy**2)
-    # Define the structuring element
-    kernel = np.ones((3,3),np.uint8)
-    eroded_magnitude = cv2.erode(magnitude, kernel, iterations=1)
-    contour_indices=np.array(np.where(magnitude>0))
-    return np.transpose(contour_indices)
-    
-def get_contour(mask):
     # Convert the mask to uint8
     mask_uint8 = (mask > 0).astype(np.uint8) * 255
 
@@ -161,8 +177,7 @@ def get_contour(mask):
 
 
 def get_mask(source_indices,im_x,im_y):
-    mask = np.zeros((im_y, im_x), dtype=np.uint8)
-    print(mask.shape)
+    mask = np.ones((im_y, im_x), dtype=np.uint8)*-1
     for x, y in source_indices:
         mask[x, y] = 255
     return mask
