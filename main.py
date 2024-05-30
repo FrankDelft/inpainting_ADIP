@@ -7,8 +7,8 @@ import inpaint
 from util import *
 
 # Load the image
-name='girl.png'
-name_mask='girl2.png'
+name='image1.jpg'
+name_mask='mask1.jpg'
 
 # name='image7.jpg'
 # name_mask='mask7.jpg'
@@ -28,5 +28,5 @@ source_indices_mask=np.array(np.where(source_region_mask==255)).T
 contour_mask=get_contour(source_region_mask)
 
 
-inpaint_obj = inpaint.Inpainting(img, source_indices_mask, patch_size=3)
+inpaint_obj = inpaint.Inpainting(img, source_indices_mask, patch_size=4)
 inpaint_obj.in_paint_alg()

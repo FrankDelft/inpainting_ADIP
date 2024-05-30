@@ -44,14 +44,14 @@ def patch_distance(patch_indices,img,patch_size,source_indices_complete,source_r
     s_patch_y_max = max_similarity[1] + patch_size+1
     patch_curr=img_lab[s_patch_x_min:s_patch_x_max,s_patch_y_min:s_patch_y_max,:]
     # Plot patch_curr and patch_target side by side
-    # fig, axes = plt.subplots(1, 2, figsize=(10, 5))
-    # axes[0].imshow(patch_curr)
-    # axes[0].set_title('patch_curr')
-    # axes[1].imshow(patch_target)
-    # axes[1].set_title('patch_target')
-    # plt.savefig("patch_comparison.png")
-    # plt.close(fig)
-    # plt.clf()
+    fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+    axes[0].imshow(patch_curr)
+    axes[0].set_title('patch_curr')
+    axes[1].imshow(patch_target)
+    axes[1].set_title('patch_target')
+    plt.savefig("patch_comparison.png")
+    plt.close(fig)
+    plt.clf()
     return max_similarity
 
 

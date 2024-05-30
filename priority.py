@@ -46,11 +46,12 @@ def isophote(img,source_region,patch_size,contour):
     img=rgb2gray(img)
     img[source_region==-1]=None
 
-    gradient = np.gradient(img)
-    gradient_val =np.nan_to_num( np.sqrt(gradient[0]**2 + gradient[1]**2))
+    gradient = np.nan_to_num(np.gradient(img))
+    gradient_val = np.sqrt(gradient[0]**2 + gradient[1]**2)
     max_gradient=np.zeros([img.shape[0],img.shape[1],2])
-
+    counter=0
     for point in contour:
+        counter+=1
         patch_x_min = point[0] - patch_size
         patch_x_max = point[0] + patch_size + 1
         patch_y_min = point[1] - patch_size
@@ -58,38 +59,13 @@ def isophote(img,source_region,patch_size,contour):
         patch_y_gradient = gradient[0][patch_x_min:patch_x_max, patch_y_min:patch_y_max]
         patch_x_gradient=gradient[1][patch_x_min:patch_x_max, patch_y_min:patch_y_max]
         patch_grad_val=gradient_val[patch_x_min:patch_x_max, patch_y_min:patch_y_max]
-
-
         patch_max_pos = np.unravel_index(
             patch_grad_val.argmax(),
             patch_grad_val.shape
         )
-
         max_gradient[point[0], point[1], 0] = patch_y_gradient[patch_max_pos]
         max_gradient[point[0], point[1], 1] = patch_x_gradient[patch_max_pos]
-        max_gradient = np.nan_to_num(max_gradient)
     return max_gradient
-
-
-# #function  found in matlab documentation
-# def isophote(L,source_region, alpha=0.25):
-#     #convert image to grayscale
-#     L=cv2.cvtColor(L, cv2.COLOR_RGB2GRAY)
-#     #nromalize the image
-#     L = L.astype(float)
-#     #initialise the gradient and theta
-#     Lx, Ly = np.gradient(L)
-#     I = np.sqrt(Lx**2 + Ly**2)
-#     I = I / np.max(np.max(I))
-#     T = (I >= alpha)
-#     for x in range(source_region.shape[0]):
-#         for y in range(source_region.shape[1]):
-#             if source_region[x,y]==-1:
-#                 Lx[x,y]=0
-#                 Ly[x,y]=0
-#     Lx, Ly = Lx / 255, Ly / 255
-#     Gradient=np.array([Lx,Ly]).T
-#     return Gradient
 
 
 
@@ -114,23 +90,3 @@ def calc_normal(source_region,contour_indices):
     unit_normal = np.abs(normal/norm)
     return unit_normal
 
-
-
-# def calc_normal(source_region,contour_indices):
-        
-#     # Convert source_region to float64
-#     source_region = source_region.astype(np.float64)
-#     # Calculate the gradient in the x and y directions
-#     grad_x = cv2.Sobel(source_region, cv2.CV_64F, 1, 0, ksize=9)
-#     grad_y = cv2.Sobel(source_region, cv2.CV_64F, 0, 1, ksize=9)
-
-#     normal=[]
-#     for point in contour_indices:
-#         x, y = point
-#         N = (grad_y[x,y]**2 + grad_x[x,y]**2)**0.5
-#         if N != 0:
-#             grad_x[x,y] /= N
-#             grad_y[x,y] /= N
-#         normal.append([grad_x[x,y],grad_y[x,y]])
-#     normal=np.array(normal)
-#     return normal

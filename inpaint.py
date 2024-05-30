@@ -47,7 +47,7 @@ class Inpainting:
         
             contour = get_contour(self.source_region.copy())
             # Remove indices within patch_size distance from image edges
-            contour = [point for point in contour if point[0] >= self.patch_size and point[0] < self.im_x - self.patch_size and point[1] >= self.patch_size and point[1] < self.im_y - self.patch_size]
+            contour = [point for point in contour if point[1] >= self.patch_size and point[1] < self.im_x - self.patch_size and point[0] >= self.patch_size and point[0] < self.im_y - self.patch_size]
 
             P, self.C = calc_Priority(contour,self.source_region.copy(), self.patch_size, self.C, self.fill_img.copy())
             max_index = np.argmax(P)
@@ -64,7 +64,7 @@ class Inpainting:
   
             est_y_min = max_similarity[1] - self.patch_size
 
-        
+            # Fill the target patch with the source patch and update source region
             self.fill_img[patch_x_min:patch_x_max, patch_y_min:patch_y_max] = self.fill_img[est_x_min:est_x_min+self.patch_size*2+1, est_y_min:est_y_min+self.patch_size*2+1]
             self.source_region[patch_x_min:patch_x_max, patch_y_min:patch_y_max] = 255
 
