@@ -12,7 +12,7 @@ def calc_Priority(contour,source_region,patch_size,C,img):
     isophotes=isophote(img.copy(),source_region,patch_size,contour) 
     normal=calc_normal(source_region,contour)
     C=calc_Confidence(contour,patch_size,C)
-    D=calc_Data(normal,isophotes)
+    D=calc_Data(normal,20*isophotes)
     P_temp=D*C
     P=np.array([P_temp[x,y] for x,y in contour])
     return P,C
