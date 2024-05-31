@@ -33,7 +33,7 @@ class Inpainting:
         for x in range(patch_size, self.im_x - patch_size):
             for y in range(patch_size, self.im_y - patch_size):
                 point=(x,y)
-                if patch_complete(self.C_init, x, y, patch_size) and point[1] >= self.patch_size and point[1] < self.im_y - self.patch_size -1 and point[0]>= self.patch_size and point[0] < self.im_x- self.patch_size-1:
+                if patch_complete(self.C_init, x, y, patch_size) and point[1] >= self.patch_size and point[1] < self.im_y - self.patch_size*2 -1 and point[0]>= self.patch_size and point[0] < self.im_x- self.patch_size*2-1:
                     self.source_indices_complete.append((x, y))
         self.source_indices_complete = np.array(self.source_indices_complete)
         self.fill_img = np.ones_like(img) * 255
@@ -43,9 +43,9 @@ class Inpainting:
         self.source_indices = source_indices
         
     def in_paint_alg(self):
-
+        counter=0
         while np.any(self.source_region == -1):
-        
+            counter+=1
             contour = get_contour(self.source_region.copy())
             # Remove indices within patch_size distance from image edges
             contour = [point for point in contour if point[1] >= self.patch_size and point[1] < self.im_x - self.patch_size-1  and point[0] >= self.patch_size and point[0] < self.im_y - self.patch_size-1]
@@ -90,4 +90,4 @@ class Inpainting:
             plt.clf()
 
             # Save fill_img to the current directory
-            cv2.imwrite("fill_img.jpg", self.fill_img)
+            cv2.imwrite("./iter/fill_img_"+str(counter)+".jpg", self.fill_img)

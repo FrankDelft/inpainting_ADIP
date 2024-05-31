@@ -8,7 +8,7 @@ from util import *
 
 # Load the image
 name='resources/image1.jpg'
-name_mask='resources/mask11.jpg'
+name_mask='resources/mask1.jpg'
 
 
 img = cv2.imread(name)
@@ -22,5 +22,5 @@ source_region_mask = (img_mask)
 source_indices_mask=np.array(np.where(source_region_mask==255)).T
 
 
-inpaint_obj = inpaint.Inpainting(img, source_indices_mask, patch_size=1)
+inpaint_obj = inpaint.Inpainting(img, source_indices_mask, patch_size=5)
 inpaint_obj.in_paint_alg()
