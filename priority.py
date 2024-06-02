@@ -7,10 +7,8 @@ from skimage.color import rgb2gray
 
 def calc_Priority(contour,source_region,patch_size,C,img):
     #iterate through the contour and calculate the patch Priority P
-    im_x=img.shape[1]
-    im_y=img.shape[0]
     isophotes=isophote(img.copy(),source_region,patch_size,contour) 
-    normal=calc_normal(source_region,contour)
+    normal=calc_normal(source_region)
     C=calc_Confidence(contour,patch_size,C)
     D=calc_Data(normal,isophotes)
     P_temp=D*C
@@ -67,7 +65,7 @@ def isophote(img,source_region,patch_size,contour):
 
 
 
-def calc_normal(source_region,contour_indices):
+def calc_normal(source_region):
     kerx = np.array([[.25, 0, -.25], [.5, 0, -.5], [.25, 0, -.25]])
     kery = np.array([[-.25, -.5, -.25], [0, 0, 0], [.25, .5, .25]])
     # Convert source_region to float64

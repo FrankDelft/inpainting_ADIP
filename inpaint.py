@@ -6,11 +6,13 @@ from best_patch import *
 
 import matplotlib.pyplot as plt
 
+import time
+import os
 
 
 class Inpainting:
     def __init__(self,img, source_indices, patch_size=9):
-
+        
         # intitialisations
         self.im_x = img.shape[1]
         self.im_y = img.shape[0]
@@ -21,7 +23,8 @@ class Inpainting:
 
         self.C_init = None
         self.C = None
-
+        self.total_time = []
+        self.pixel_remaining = [np.sum(self.source_region == -1)]
         self.C_init = self.source_region.copy()
         self.C_init[self.C_init == -1] = 0
         self.C_init[self.C_init == 255] = 1
@@ -41,12 +44,19 @@ class Inpainting:
             self.fill_img[x, y] = img[x, y]
         
         self.source_indices = source_indices
-        
-    def in_paint_alg(self):
+
+
+
+    def in_paint_alg(self,iterations=1000000,name=""):
         counter=0
-        while np.any(self.source_region == -1):
+        contour = get_contour(self.source_region.copy())
+        # Create or overwrite the directory
+        if os.path.exists(name + "iter"):
+            os.system("rm -rf " + name + "iter")
+        os.makedirs(name + "iter")
+        while np.any(self.source_region == -1) and counter<iterations:
             counter+=1
-            contour = get_contour(self.source_region.copy())
+            start_time = time.time()
             # Remove indices within patch_size distance from image edges
             contour = [point for point in contour if point[1] >= self.patch_size and point[1] < self.im_x - self.patch_size-1  and point[0] >= self.patch_size and point[0] < self.im_y - self.patch_size-1]
 
@@ -59,8 +69,8 @@ class Inpainting:
             patch_y_min = p_y - self.patch_size
             patch_y_max = p_y + self.patch_size + 1
             max_similarity = patch_distance([patch_x_min, patch_x_max, patch_y_min, patch_y_max], self.fill_img.copy(),
-                                            self.patch_size, self.source_indices_complete, self.source_region)
-            
+                                            self.patch_size, self.source_indices_complete.copy(), self.source_region.copy())
+
             est_x_min = max_similarity[0] - self.patch_size
             est_y_min = max_similarity[1] - self.patch_size
             # Fill the target patch with the source patch and update source region
@@ -75,7 +85,12 @@ class Inpainting:
             self.source_region[patch_x_min:patch_x_max, patch_y_min:patch_y_max] = 255
             self.C[patch_x_min:patch_x_max, patch_y_min:patch_y_max] = self.C[p_x, p_y]
             self.source_indices = np.array(np.where(self.source_region == 255)).T
+            contour = get_contour(self.source_region.copy())
 
+            end_time = time.time() 
+            self.total_time.append(end_time - start_time)
+            self.pixel_remaining.append(np.sum(self.source_region == -1))
+            
             # Plot source region and fill image side by side
             fig, axes = plt.subplots(1, 2, figsize=(10, 5))
             axes[0].imshow(self.source_region, cmap='gray')
@@ -90,4 +105,24 @@ class Inpainting:
             plt.clf()
 
             # Save fill_img to the current directory
-            cv2.imwrite("./iter/fill_img_"+str(counter)+".jpg", self.fill_img)
+            # cv2.imwrite("./iter/fill_img_"+str(counter)+".jpg", self.fill_img)
+            
+            rgb_img = cv2.cvtColor(self.fill_img, cv2.COLOR_BGR2RGB)
+            # Draw contour as scatter plot on top of the image
+            fig, ax = plt.subplots()
+            ax.imshow(rgb_img)
+            contour = np.array(contour)
+            ax.scatter(contour[:, 0], contour[:, 1], c='red', s=2)
+
+            # Turn off the axes
+            ax.axis('off')
+
+            # Remove padding and whitespace by setting margins to 0
+            plt.subplots_adjust(top=1, bottom=0, right=1, left=0, hspace=0, wspace=0)
+            plt.margins(0,0)
+            ax.xaxis.set_major_locator(plt.NullLocator())
+            ax.yaxis.set_major_locator(plt.NullLocator())
+
+            plt.savefig("./"+name+"iter/contour_img_"+str(counter)+".png", bbox_inches='tight', pad_inches=0)
+            plt.close(fig)
+            plt.clf()
