@@ -55,71 +55,55 @@ from skimage.color import rgb2lab
 #     return max_similarity
 
 
-from skimage.color import rgb2lab
-import numpy as np
-import matplotlib.pyplot as plt
-
-
-from skimage.color import rgb2lab
-import numpy as np
-import matplotlib.pyplot as plt
-
-def patch_distance(patch_indices, img_rgb, patch_size, source_indices_complete, source_region):
+def patch_distance(patch_indices, img_rgb, patch_size, source_region,source_indices_complete,iter):
     max_similarity = [0, 0]
     min_dist = float('inf')
-    img_rgb=img_rgb/255
+    img_rgb = img_rgb / 255.0
     img_lab = rgb2lab(img_rgb)
+    
+    # Extract target patch
     target_patch = img_lab[patch_indices[0]:patch_indices[1], patch_indices[2]:patch_indices[3]]
     source_region_patch = source_region[patch_indices[0]:patch_indices[1], patch_indices[2]:patch_indices[3]]
-    source_region_patch[source_region_patch==-1]=0
-    source_region_patch[source_region_patch==255]=1
+    source_region_patch = np.where(source_region_patch == 255, 1, 0)
    
-    height, width = img_lab.shape[:2]
-    diff_arr = np.zeros((height, width))
+    target_patch_center = (patch_indices[0] + patch_size, patch_indices[2] + patch_size )
+    dist = np.zeros_like(source_region, dtype=float)
+    for p_y,p_x in source_indices_complete:
+            patch_x_min = p_x - patch_size
+            patch_x_max = p_x + patch_size + 1
+            patch_y_min = p_y - patch_size
+            patch_y_max = p_y + patch_size + 1
 
-    for point in source_indices_complete:
-        p_x, p_y = point
-        patch_x_min = p_x - patch_size
-        patch_x_max = p_x + patch_size + 1
-        patch_y_min = p_y - patch_size
-        patch_y_max = p_y + patch_size + 1
-
-        if not _is_valid_patch(patch_x_min, patch_x_max, patch_y_min, patch_y_max, height, width):
-            continue
-        
-        source_patch = img_lab[patch_y_min:patch_y_max, patch_x_min:patch_x_max]
-        
-        # Expand the mask to match the shape of the patches
-        mask_expanded = np.repeat(source_region_patch[:, :, np.newaxis], 3, axis=2)
-        
-        target_patch_masked = target_patch * mask_expanded
-        source_patch_masked = source_patch * mask_expanded
-        
-        squared_diff = np.square(target_patch_masked - source_patch_masked).sum()
-        euclidean_dist = np.sqrt((p_x - (patch_indices[2] + patch_size // 2))**2 + (p_y - (patch_indices[0] + patch_size // 2))**2)
-        
-        tot =squared_diff+euclidean_dist
-        diff_arr[p_y, p_x] = tot
-        
-        if tot < min_dist:
-            min_dist = tot
-            max_similarity = [p_y, p_x]
-
-
+            source_patch = img_lab[patch_y_min:patch_y_max, patch_x_min:patch_x_max]
+            
+            # Apply the mask to the patches
+            mask_expanded = source_region_patch[:, :, np.newaxis]
+            target_patch_masked = target_patch * mask_expanded
+            source_patch_masked = source_patch * mask_expanded
+            
+            squared_diff = np.sum(np.square(target_patch_masked - source_patch_masked))
+            euclidean_dist = np.sqrt((p_x - target_patch_center[1])**2 + (p_y - target_patch_center[0])**2)
+            
+            tot = squared_diff+euclidean_dist
+            dist[p_y,p_x]=tot
+            if tot < min_dist:
+                min_dist = tot
+                max_similarity = [p_y, p_x]
+                # Plot dist with a color bar
+    plt.imshow(dist)
+    plt.colorbar()
+    plt.scatter(target_patch_center[1], target_patch_center[0], color='red')
+    plt.savefig('dist/'+str(iter)+'_plot.png')
+    plt.close()
     return max_similarity
 
 
-def _is_valid_patch(patch_x_min, patch_x_max, patch_y_min, patch_y_max, height, width):
-    return patch_x_min >= 0 and patch_x_max <= width and patch_y_min >= 0 and patch_y_max <= height
-
-def patch_complete(C_original,p_x,p_y,patch_size):
+def patch_complete(source_region, p_x, p_y, patch_size):
     patch_x_min = p_x - patch_size
-    patch_x_max = p_x + patch_size+1
+    patch_x_max = p_x + patch_size + 1
     patch_y_min = p_y - patch_size
-    patch_y_max = p_y + patch_size+1
-    # print(patch_x_min,patch_x_max,patch_y_min,patch_y_max, "\t", C_original.shape)
-    for x in range(patch_x_min,patch_x_max):
-        for y in range(patch_y_min,patch_y_max):
-            if C_original[y,x]!=1:
-                return False
+    patch_y_max = p_y + patch_size + 1
+    patch=source_region[patch_y_min:patch_y_max, patch_x_min:patch_x_max]
+    if np.any(patch != 1)and patch.shape[0]==2*patch_size+1 and patch.shape[1]==2*patch_size+1:
+        return False
     return True

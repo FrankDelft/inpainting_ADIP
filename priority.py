@@ -40,7 +40,7 @@ def calc_Data(normal,isophotes):
 def isophote(img,source_region,patch_size,contour):
     #convert image to grayscale
     img=rgb2gray(img)
-    img[source_region==-1]=None
+    img[source_region==-1]=np.nan
 
     gradient = np.nan_to_num(np.gradient(img))
     gradient_val = np.sqrt(gradient[0]**2 + gradient[1]**2)
@@ -55,10 +55,9 @@ def isophote(img,source_region,patch_size,contour):
         patch_y_gradient = gradient[0][patch_x_min:patch_x_max, patch_y_min:patch_y_max]
         patch_x_gradient=gradient[1][patch_x_min:patch_x_max, patch_y_min:patch_y_max]
         patch_grad_val=gradient_val[patch_x_min:patch_x_max, patch_y_min:patch_y_max]
-        patch_max_pos = np.unravel_index(
-            patch_grad_val.argmax(),
-            patch_grad_val.shape
-        )
+
+        patch_max_pos = np.unravel_index(patch_grad_val.argmax(),patch_grad_val.shape)
+        
         max_gradient[point[0], point[1], 0] = patch_y_gradient[patch_max_pos]
         max_gradient[point[0], point[1], 1] = patch_x_gradient[patch_max_pos]
     return max_gradient
