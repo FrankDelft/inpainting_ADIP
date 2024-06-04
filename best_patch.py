@@ -55,7 +55,7 @@ from skimage.color import rgb2lab
 #     return max_similarity
 
 
-def patch_distance(patch_indices, img_rgb, patch_size, source_region,source_indices_complete,iter):
+def patch_distance(patch_indices, img_rgb, patch_size, source_region,source_indices_complete,euclid):
     max_similarity = [0, 0]
     min_dist = float('inf')
     img_rgb = img_rgb / 255.0
@@ -83,18 +83,14 @@ def patch_distance(patch_indices, img_rgb, patch_size, source_region,source_indi
             
             squared_diff = np.sum(np.square(target_patch_masked - source_patch_masked))
             euclidean_dist = np.sqrt((p_x - target_patch_center[1])**2 + (p_y - target_patch_center[0])**2)
-            
-            tot = squared_diff+euclidean_dist
+            if euclid:
+                tot = squared_diff+euclidean_dist
+            else:
+                 tot = squared_diff
             dist[p_y,p_x]=tot
             if tot < min_dist:
                 min_dist = tot
-                max_similarity = [p_y, p_x]
-                # Plot dist with a color bar
-    plt.imshow(dist)
-    plt.colorbar()
-    plt.scatter(target_patch_center[1], target_patch_center[0], color='red')
-    plt.savefig('dist/'+str(iter)+'_plot.png')
-    plt.close()
+                max_similarity = [p_y, p_x]  
     return max_similarity
 
 

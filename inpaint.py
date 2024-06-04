@@ -50,7 +50,7 @@ class Inpainting:
 
 
 
-    def in_paint_alg(self,iterations=1000000,name=""):
+    def in_paint_alg(self,iterations=1000000,name="",euclid=True,update_source=True):
         counter=0
         contour = get_contour(self.source_region.copy())
         # Create or overwrite the directory
@@ -73,7 +73,7 @@ class Inpainting:
             patch_y_min = p_y - self.patch_size
             patch_y_max = p_y + self.patch_size + 1
             max_similarity = patch_distance([patch_x_min, patch_x_max, patch_y_min, patch_y_max], self.fill_img.copy(),
-                                            self.patch_size, self.source_region.copy(), self.source_indices_complete,counter)
+                                            self.patch_size, self.source_region.copy(), self.source_indices_complete,euclid)
             
             est_x_min = max_similarity[0] - self.patch_size
             est_y_min = max_similarity[1] - self.patch_size
@@ -93,15 +93,15 @@ class Inpainting:
                 self.C[x-self.patch_size+p_x, y-self.patch_size+p_y] = self.C[p_x, p_y]
             
             indices_to_delete = []
+            if update_source:
+                for i in range(len(self.source_indices_incomplete)):
+                    p_x, p_y = self.source_indices_incomplete[i]
+                    if patch_complete(self.source_region/255,p_y,p_x,self.patch_size):
+                        self.source_indices_complete = np.append(self.source_indices_complete, [[p_x,p_y]], axis=0)
+                        indices_to_delete.append(i)
 
-            for i in range(len(self.source_indices_incomplete)):
-                p_x, p_y = self.source_indices_incomplete[i]
-                if patch_complete(self.source_region/255,p_y,p_x,self.patch_size):
-                    self.source_indices_complete = np.append(self.source_indices_complete, [[p_x,p_y]], axis=0)
-                    indices_to_delete.append(i)
-
-            # Delete the indices from the original array
-            self.source_indices_incomplete = np.delete(self.source_indices_incomplete, indices_to_delete, axis=0)
+                # Delete the indices from the original array
+                self.source_indices_incomplete = np.delete(self.source_indices_incomplete, indices_to_delete, axis=0)
                     
         
 
@@ -117,7 +117,7 @@ class Inpainting:
             fig, axes = plt.subplots(1, 2, figsize=(10, 5))
             axes[0].imshow(self.source_region, cmap='gray')
             axes[0].set_title('Source Region')
-            axes[0].scatter(self.source_indices_incomplete[:, 1], self.source_indices_incomplete[:, 0], c='blue', s=5)
+            axes[0].scatter(self.source_indices_complete[:, 1], self.source_indices_complete[:, 0], c='blue', s=5)
             axes[0].scatter(max_similarity[1], max_similarity[0], c='red', s=10)
             axes[1].imshow(self.fill_img)
             axes[1].set_title('Fill Image')
@@ -125,10 +125,7 @@ class Inpainting:
             plt.savefig("source_fill_img.png")
             plt.close(fig)
             plt.clf()
-
-            # Save fill_img to the current directory
-            # cv2.imwrite("./iter/fill_img_"+str(counter)+".jpg", self.fill_img)
-            
+                        
             rgb_img = cv2.cvtColor(self.fill_img, cv2.COLOR_BGR2RGB)
             # Draw contour as scatter plot on top of the image
             fig, ax = plt.subplots()
